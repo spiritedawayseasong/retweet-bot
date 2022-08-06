@@ -29,27 +29,15 @@ auth = tweepy.OAuthHandler(os.getenv("consumer_key"), os.getenv("consumer_secret
 auth.set_access_token(os.getenv("access_token"), os.getenv("access_token_secret"))
 api = tweepy.API(auth, wait_on_rate_limit=True)
 
-# retrieve last savepoint if available
-try:
-    with open(last_id_file, "r") as file:
-        savepoint = file.read()
-except IOError:
-    savepoint = ""
-    print("No savepoint found. Bot is now searching for results")
-
+lastTweet = api.user_timeline(user_id=1514646076363522054, count=1, exclude_replies=True, include_rts=True, trim_user=True)
+lastTweetId = lastTweet[0].retweeted_status.id
 # search query
-timelineIterator = tweepy.Cursor(api.search_tweets, q=hashtag, since_id=savepoint, lang=tweetLanguage).items(num)
+timelineIterator = tweepy.Cursor(api.search_tweets, q=hashtag, since_id=lastTweetId, lang=tweetLanguage).items(num)
 
 # put everything into a list to be able to sort/filter
 timeline = []
 for status in timelineIterator:
     timeline.append(status)
-
-
-try:
-    last_tweet_id = timeline[0].id
-except IndexError:
-    last_tweet_id = savepoint
 
 # filter @replies/blacklisted words & users out and reverse timeline
 #timeline = filter(lambda status: status.text[0] = "@", timeline)   - uncomment to remove all tweets with an @mention
@@ -71,14 +59,10 @@ for status in timeline:
 
         api.retweet(status.id)
         tw_counter += 1
-    except tweepy.error.TweepError as e:
+    except tweepy.errors.TweepyException as e:
         # just in case tweet got deleted in the meantime or already retweeted
         err_counter += 1
         # print e
         continue
 
 print("Finished. %d Tweets retweeted, %d errors occured." % (tw_counter, err_counter))
-
-# write last retweeted tweet id to file
-with open(last_id_file, "w") as file:
-    file.write(str(last_tweet_id))

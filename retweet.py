@@ -2,19 +2,17 @@
 # -*- coding: utf-8 -*-
 
 import os, configparser, tweepy, inspect, hashlib
+from dotenv import load_dotenv
+load_dotenv()
 
 path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
-# read config
-config = configparser.SafeConfigParser()
-config.read(os.path.join(path, "config"))
-
 # your hashtag or search query and tweet language (empty = all languages)
-hashtag = config.get("settings", "search_query")
-tweetLanguage = config.get("settings", "tweet_language")
+hashtag = os.getenv("search_query")
+tweetLanguage = os.getenv("tweet_language")
 
 # Number retweets per time
-num = int(config.get("settings","number_of_rt"))
+num = int(os.getenv("number_of_rt"))
 
 # blacklisted users and words
 userBlacklist = []
@@ -27,9 +25,9 @@ rt_bot_path = os.path.dirname(os.path.abspath(__file__))
 last_id_file = os.path.join(rt_bot_path, last_id_filename)
 
 # create bot
-auth = tweepy.OAuthHandler(config.get("twitter", "consumer_key"), config.get("twitter", "consumer_secret"))
-auth.set_access_token(config.get("twitter", "access_token"), config.get("twitter", "access_token_secret"))
-api = tweepy.API(auth)
+auth = tweepy.OAuthHandler(os.getenv("consumer_key"), os.getenv("consumer_secret"))
+auth.set_access_token(os.getenv("access_token"), os.getenv("access_token_secret"))
+api = tweepy.API(auth, wait_on_rate_limit=True)
 
 # retrieve last savepoint if available
 try:
@@ -40,7 +38,7 @@ except IOError:
     print("No savepoint found. Bot is now searching for results")
 
 # search query
-timelineIterator = tweepy.Cursor(api.search, q=hashtag, since_id=savepoint, lang=tweetLanguage).items(num)
+timelineIterator = tweepy.Cursor(api.search_tweets, q=hashtag, since_id=savepoint, lang=tweetLanguage).items(num)
 
 # put everything into a list to be able to sort/filter
 timeline = []
